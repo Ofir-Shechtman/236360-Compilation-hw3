@@ -1,0 +1,104 @@
+%{
+
+   #include "hw3_output.hpp"
+   #include "SymbolTable.hpp"
+   extern int yylineno;
+   int yylex(void);
+   int yyparse();
+   void yyerror(const char*);
+
+%}
+
+
+%token VOID INT BYTE B BOOL TRUE FALSE RETURN WHILE BREAK CONTINUE SWITCH CASE ASSIGN DEFAULT COLON SC COMMA ID NUM STRING
+%right IF
+%right ELSE
+%left LBRACE RBRACE
+%left OR
+%left AND
+%left EQUALITY
+%nonassoc RELOP
+%left ADD_SUB_OP
+%left MULT_DIV_OP
+%right NOT
+%left LPAREN RPAREN
+
+%%
+
+Program : {SymbolTable::GetInstance();} Funcs {SymbolTable::GetInstance()->print_funcs();}
+
+Funcs : {}
+        | FuncDecl {SymbolTable::GetInstance()->add_Func($1);} Funcs
+
+FuncDecl : RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE {$$ = new Variable(new Func($1,$4),$2);}
+
+RetType : Type {$$=$1;}
+        | VOID {$$=new Void();}
+
+Formals : {$$ = new FormalsList();}
+        | FormalsList {$$ = $1;}
+
+FormalsList : FormalDecl {$$ = new FormalsList(); (dynamic_cast<FormalsList *>($$))->add($1);}
+        | FormalDecl COMMA FormalsList {$$=$3;    (dynamic_cast<FormalsList *>($$))->add($1); }
+
+FormalDecl : Type ID {$$= new Variable($1, $2);}
+
+Statements : Statement {}
+        | Statements Statement {}
+
+Statement : LBRACE Statements RBRACE {}
+        | Type ID SC {$$= new Variable($1, $2); SymbolTable::GetInstance()->add_var($$); }
+        | Type ID ASSIGN Exp SC {$$= new Variable($1, $2); SymbolTable::GetInstance()->add_var($$); }
+        | ID ASSIGN Exp SC {}
+        | Call SC {}
+        | RETURN SC {}
+        | RETURN Exp SC {}
+        | IF LPAREN Exp RPAREN Statement %prec IF {}
+        | IF LPAREN Exp RPAREN Statement ELSE Statement %prec ELSE {}
+        | WHILE LPAREN Exp RPAREN Statement {}
+        | BREAK SC {}
+        | CONTINUE SC {}
+        | SWITCH LPAREN Exp RPAREN LBRACE CaseList RBRACE {}
+
+Call : ID LPAREN ExpList RPAREN {}
+        | ID LPAREN RPAREN {}
+
+ExpList : Exp {}
+        | Exp COMMA ExpList {}
+
+Type : INT {$$=new Int();}
+        | BYTE {$$=new Byte();}
+        | BOOL {$$=new Bool();}
+
+Exp : LPAREN Exp RPAREN {}
+        | Exp MULT_DIV_OP Exp {}
+        | Exp ADD_SUB_OP Exp {}
+        | ID {}
+        | Call {}
+        | NUM {}
+        | NUM B {}
+        | STRING {}
+        | TRUE {$$=new Boolean(true);}
+        | FALSE {$$=new Boolean(false);}
+        | NOT Exp {}
+        | Exp AND Exp {}
+        | Exp OR Exp {}
+        | Exp EQUALITY Exp {}
+        | Exp RELOP Exp {}
+
+CaseList : CaseDecl CaseList {}
+        | CaseDecl {}
+        | DEFAULT COLON Statements {}
+
+CaseDecl : CASE NUM COLON Statements {}
+
+%%
+
+
+void yyerror(const char*){
+    output::errorSyn(yylineno);
+}
+
+
+
+int main(){ return yyparse(); }

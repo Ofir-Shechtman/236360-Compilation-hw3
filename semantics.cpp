@@ -23,9 +23,10 @@ protected:
 //42. 𝐸𝑥𝑝 → 𝐹𝐴𝐿𝑆𝐸
 
 class Id : public Exp{
-    string name;
+    string id_name;
 public:
-    explicit Id(const string val) : name(val){};
+    explicit Id(const string val) : id_name(val){};
+    string name() const{return id_name;}
 };
 
 class Num : public Exp{
@@ -91,41 +92,43 @@ public:
     string name() const override {return "BOOL";};
 };
 
+class Variable : public  Exp{
+public:
+    Type* type;
+    Id* id;
+    Variable(Exp* type, Exp* id):type(dynamic_cast<Type *>(type)), id(dynamic_cast<Id *>(id)){};
+};
+
 
 class FormalsList : public Exp{
-    vector<Type*> Formals;
+    vector<Variable*> Formals;
 public:
     FormalsList()=default;
-    void add(Exp* p){
-        Formals.insert(Formals.begin(), dynamic_cast<Type *>(p));
+    void add(Exp* var){
+        Formals.insert(Formals.begin(), dynamic_cast<Variable *>(var));
     };
     vector<string> get_types() const{
         vector<string> argTypes;
         for(auto t:Formals)
-            argTypes.emplace_back(t->name());
+            argTypes.emplace_back(t->type->name());
         return argTypes;};
 };
 
 
-class Func : public Exp{
+class Func : public Type{
     Type* RetType;
-    Id* ID;
     FormalsList* formals_list;
 public:
-    Func(Exp* p, Exp* id, Exp* f): RetType(dynamic_cast<Type *>(p)), ID(
-            dynamic_cast<Id *>(id)), formals_list(dynamic_cast<FormalsList *>(f)){
-    }
-    void print(){
+    Func(Exp* p, Exp* f): RetType(dynamic_cast<Type *>(p)), formals_list(dynamic_cast<FormalsList *>(f)){}
+    string name() const override{
         vector<string> argTypes = formals_list->get_types();
-        cout << output::makeFunctionType(RetType->name(), argTypes) << endl;
+        return output::makeFunctionType(RetType->name(), argTypes);
     }
 };
 
-struct Arg{
-    Id id;
-    Type* type;
-    int offset;
-};
+
+
+
 
 
 

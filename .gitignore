@@ -1,2 +1,5 @@
 # Project exclude paths
 /cmake-build-debug/
+/hw3-tests.zip
+/hw3-code.zip
+/hw3.pdf

@@ -12,8 +12,8 @@ SymbolTable::SymbolTable() {
     fl2->add(new Int());
     Func* f2= new Func(new Void(), new Id("print"), fl2);
 
-    funcs.emplace_back(f1);
-    funcs.emplace_back(f2);
+    add_Func(f1);
+    add_Func(f2);
 
 }
 

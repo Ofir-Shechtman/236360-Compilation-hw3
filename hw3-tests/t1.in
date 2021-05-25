@@ -1,4 +1,4 @@
-void printOk(bool isOk, int a) {
+void printOk(int isOk, bool j) {
     if (isOk) print("ok");
 }
 

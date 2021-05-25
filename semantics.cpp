@@ -64,7 +64,7 @@ public:
 class Int : public Type{
 public:
     Int()=default;
-    string name() const override {return "int";};
+    string name() const override {return "INT";};
 };
 
 class Byte : public Type{
@@ -97,7 +97,7 @@ class FormalsList : public Exp{
 public:
     FormalsList()=default;
     void add(Exp* p){
-        Formals.push_back(dynamic_cast<Type *>(p));
+        Formals.insert(Formals.begin(), dynamic_cast<Type *>(p));
     };
     vector<string> get_types() const{
         vector<string> argTypes;

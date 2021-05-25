@@ -28,9 +28,9 @@
 Program : {SymbolTable::GetInstance();} Funcs {SymbolTable::GetInstance()->print_funcs();}
 
 Funcs : {}
-        | FuncDecl {SymbolTable::GetInstance()->add_Func($1);} Funcs
+        | FuncDecl Funcs
 
-FuncDecl : RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE {$$ = new Variable(new Func($1,$4),$2);}
+FuncDecl : RetType ID LPAREN Formals RPAREN LBRACE {SymbolTable::GetInstance()->push();} Statements RBRACE {$$ = new Variable(new Func($1,$4),$2); SymbolTable::GetInstance()->add_Func($$); SymbolTable::GetInstance()->pop();}
 
 RetType : Type {$$=$1;}
         | VOID {$$=new Void();}
@@ -46,19 +46,21 @@ FormalDecl : Type ID {$$= new Variable($1, $2);}
 Statements : Statement {}
         | Statements Statement {}
 
-Statement : LBRACE Statements RBRACE {}
+Statement : LBRACE Scope RBRACE
         | Type ID SC {$$= new Variable($1, $2); SymbolTable::GetInstance()->add_var($$); }
         | Type ID ASSIGN Exp SC {$$= new Variable($1, $2); SymbolTable::GetInstance()->add_var($$); }
         | ID ASSIGN Exp SC {}
         | Call SC {}
         | RETURN SC {}
         | RETURN Exp SC {}
-        | IF LPAREN Exp RPAREN Statement %prec IF {}
-        | IF LPAREN Exp RPAREN Statement ELSE Statement %prec ELSE {}
+        | IF LPAREN Exp RPAREN Scope %prec IF {}
+        | IF LPAREN Exp RPAREN Scope ELSE Scope %prec ELSE {}
         | WHILE LPAREN Exp RPAREN Statement {}
         | BREAK SC {}
         | CONTINUE SC {}
-        | SWITCH LPAREN Exp RPAREN LBRACE CaseList RBRACE {}
+        | SWITCH LPAREN Exp RPAREN LBRACE {SymbolTable::GetInstance()->push();} CaseList {SymbolTable::GetInstance()->pop();} RBRACE {}
+
+Scope : {SymbolTable::GetInstance()->push();} Statements {SymbolTable::GetInstance()->pop();}
 
 Call : ID LPAREN ExpList RPAREN {}
         | ID LPAREN RPAREN {}

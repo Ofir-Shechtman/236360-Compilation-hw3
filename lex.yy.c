@@ -544,8 +544,8 @@ int yy_flex_debug = 0;
 char *yytext;
 #line 1 "scanner.lex"
 #line 2 "scanner.lex"
-#include "parser.tab.hpp"
 #include "hw3_output.hpp"
+#include "parser.tab.hpp"
 #line 550 "lex.yy.c"
 
 #define INITIAL 0
@@ -981,12 +981,12 @@ YY_RULE_SETUP
 case 32:
 YY_RULE_SETUP
 #line 49 "scanner.lex"
-{yylval=new Num(yytext); return NUM;}
+{ return NUM;}
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
 #line 50 "scanner.lex"
-{yylval=new Id(yytext); return ID;}
+{return ID;}
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
@@ -996,7 +996,7 @@ YY_RULE_SETUP
 case 35:
 YY_RULE_SETUP
 #line 52 "scanner.lex"
-{ return STRING;}
+{ return STRING;} 
 	YY_BREAK
 case 36:
 /* rule 36 can match eol */

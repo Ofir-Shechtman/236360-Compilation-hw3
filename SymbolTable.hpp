@@ -32,6 +32,7 @@ public:
         print_funcs();
     }
     void print_funcs() const {
+        output::endScope();
         for(auto f:funcs){
             f.print();
         }
@@ -43,18 +44,31 @@ public:
         offsets_stack.emplace_back(offsets_stack.back());
     }
     void pop(){
+        output::endScope();
+        for(auto a:tables_stack.back()){
+            a.print();
+        }
         tables_stack.pop_back();
         offsets_stack.pop_back();
     }
     void add_Func(Exp* f){
-        funcs.emplace_back(Arg(dynamic_cast<Variable *>(f), 0));
+        add_Func(dynamic_cast<Variable *>(f));
     }
     void add_Func(Variable* f){
+        auto args=  dynamic_cast<Func *>(f->type)->args();
         funcs.emplace_back(Arg(f, 0));
+        int offset=args.size()*-1;
+        for(auto a:args){
+            add_var(a, offset++);
+        }
+    }
+
+    void add_var(Variable* v, int offset){
+        Arg new_arg = Arg(dynamic_cast<Variable *>(v), offset);
+        tables_stack.back().emplace_back(new_arg);
     }
     void add_var(Exp* v){
-        Arg new_arg = Arg(dynamic_cast<Variable *>(v), offsets_stack.back()++);
-        funcs.emplace_back(new_arg);
-        new_arg.print();
+        add_var(dynamic_cast<Variable *>(v),  ++offsets_stack.back());
     }
+
 };

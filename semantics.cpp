@@ -101,8 +101,8 @@ public:
 
 
 class FormalsList : public Exp{
-    vector<Variable*> Formals;
 public:
+    vector<Variable*> Formals;
     FormalsList()=default;
     void add(Exp* var){
         Formals.insert(Formals.begin(), dynamic_cast<Variable *>(var));
@@ -123,6 +123,9 @@ public:
     string name() const override{
         vector<string> argTypes = formals_list->get_types();
         return output::makeFunctionType(RetType->name(), argTypes);
+    }
+    const vector<Variable*>& args() const{
+        return formals_list->Formals;
     }
 };
 

@@ -1,11 +1,10 @@
-void printOk(int isOk, bool j) {
+void printOk(byte isOk) {
     if (isOk) print("ok");
 }
 
 void main()
 {
-    int x = 4;
-    byte y = 100 b;
-    printOk(x>y);
+    int y = 100 b;
+    printOk(y);
     int z;
 }

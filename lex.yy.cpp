@@ -544,9 +544,9 @@ int yy_flex_debug = 0;
 char *yytext;
 #line 1 "scanner.lex"
 #line 2 "scanner.lex"
-#include "semantics.cpp"
+#include "semantics.hpp"
+#include "hw3_output.hpp"
 #include "parser.tab.hpp"
-#define YYSTYPE Exp*
 #line 551 "lex.yy.c"
 
 #define INITIAL 0
@@ -2022,6 +2022,5 @@ void yyfree (void * ptr )
 #define YYTABLES_NAME "yytables"
 
 #line 56 "scanner.lex"
-
 
 

@@ -1,6 +1,7 @@
 %{
-#include "parser.tab.hpp"
+#include "semantics.hpp"
 #include "hw3_output.hpp"
+#include "parser.tab.hpp"
 %}
 %option yylineno
 %option noyywrap
@@ -49,7 +50,7 @@ b {return B;}
 0|[1-9]{DIGIT}* {yylval=new Num(yytext); return NUM;}
 {ID} {yylval=new Id(yytext); return ID;}
 (\/\/)[^\n\r\r\n]* {;}
-({DQ})([^\"\\\n\r\0]|(\\.))*({DQ}) { return STRING;}
+({DQ})([^\"\\\n\r\0]|(\\.))*({DQ}) {yylval=new String(yytext); return STRING;}
 {WS} {;}
 . {output::errorLex(yylineno);}
 %%

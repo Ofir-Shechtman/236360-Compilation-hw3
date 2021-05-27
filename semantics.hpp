@@ -190,7 +190,14 @@ public:
     }
 };
 
-
+class ReturnType : public Type{
+    string t;
+public:
+    ReturnType(string t): t(t){};
+    string name() const override{
+        return t;
+    }
+};
 
 
 struct Arg{
@@ -207,6 +214,8 @@ class SymbolTable{
     vector<vector<Arg>> tables_stack;
     vector<int> offsets_stack;
     vector<Arg> funcs;
+    vector<Type*> returns;
+    int in_while;
     static SymbolTable* singleton_;
     SymbolTable(){
         auto fl1= new FormalsList();
@@ -222,6 +231,7 @@ class SymbolTable{
         funcs={Arg(v1, 0), Arg(v2, 0)};
         tables_stack.emplace_back(funcs);
         offsets_stack.emplace_back(-1);
+        in_while=0;
 
     };
 
@@ -241,7 +251,19 @@ public:
     void push(){
         tables_stack.emplace_back(vector<Arg>());
         offsets_stack.emplace_back(offsets_stack.back());
+
     }
+
+    void push_ret(STYPE* rt){
+        push();
+        returns.emplace_back(dynamic_cast<Type *>(rt));
+    }
+
+    void push_while(STYPE* rt){
+        push();
+        in_while++;
+    }
+
     void pop(){
         output::endScope();
         for(auto a:tables_stack.back()){
@@ -249,7 +271,19 @@ public:
         }
         tables_stack.pop_back();
         offsets_stack.pop_back();
+
     }
+
+    void pop_ret(){
+        pop();
+        returns.pop_back();
+    }
+
+    void pop_while(){
+        pop();
+        in_while--;
+    }
+
     void add_Func(STYPE* f){
         add_Func(dynamic_cast<Variable *>(f));
     }
@@ -324,16 +358,40 @@ public:
 
     void assign(STYPE* id_st, STYPE* exp_st){
         Id* id = dynamic_cast<Id *>(id_st);
-        Exp* exp = dynamic_cast<Exp *>(exp_st);
+        Type* exp_type = dynamic_cast<Type *>(exp_st);
+        if(!exp_type)
+            exp_type = dynamic_cast<Exp *>(exp_st)->type();
         if(!contain_var(id->name()))
             output::errorUndef(yylineno, id->name());
         auto id_t = get_id_type(id);
-        if(id_t->name()==exp->type()->name() || (id_t->name()=="INT" && exp->type()->name()=="BYTE"))
+        if(id_t->name() == exp_type->name() || (id_t->name() == "INT" && exp_type->name() == "BYTE"))
             return;
         else
             output::errorMismatch(yylineno);
     }
 
+    void check_return(STYPE* t){
+        Type* type = returns.back();
+        Type *ret = (dynamic_cast<Type *>(t));
+        if(dynamic_cast<Void *>(ret)){
+            if(!dynamic_cast<Void *>(type))
+                output::errorMismatch(yylineno);
+        }
+        else{
+            if(ret->name()!=type->name() && !(type->name()=="INT" && ret->name()=="BYTE"))
+                output::errorMismatch(yylineno);
+        }
+    }
+
+    void check_while(STYPE* t){
+        Type *ret = (dynamic_cast<ReturnType *>(t));
+        if(!in_while) {
+            if(ret->name()=="break")
+                    output::errorUnexpectedBreak(yylineno);
+            else if(ret->name()=="continue")
+                output::errorUnexpectedContinue(yylineno);
+        }
+    }
 };
 
 

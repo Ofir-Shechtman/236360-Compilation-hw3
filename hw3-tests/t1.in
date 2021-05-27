@@ -1,10 +1,9 @@
-void printOk(byte isOk) {
-    if (isOk) print("ok");
+int foo(){
+    while(1==2)
+        break;
 }
 
 void main()
 {
-    int y = 100 b;
-    printOk(y);
-    int z;
+    int y = foo();
 }

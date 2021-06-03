@@ -37,6 +37,11 @@ public:
     string name() const{return id_name;}
     Type* type() const override;
 };
+bool is_type(STYPE* e, string type) ;
+
+bool is_num(STYPE* e);
+bool is_bool(STYPE* e);
+
 
 class Num : public Exp{
 public:
@@ -58,31 +63,18 @@ public:
 
 class Boolean : public Exp{
 public:
-    explicit Boolean(bool=true){};
-    static bool is_num(STYPE* e) {
-        Exp* exp=dynamic_cast<Exp*>(e);
-        if(!exp)
-            return false;
-        auto id=dynamic_cast<Id*>(e);
-        if(id)
-            exp=id;
-        auto t=exp->type()->name();
-        return t=="INT" || t=="BYTE";
-    }
-    static bool is_bool(STYPE* e) {
-        return dynamic_cast<Boolean*>(e)!= nullptr;
-    }
-    Boolean(STYPE* e1, STYPE* e2){
-        if(is_num(e1) &&  is_num(e2))
+    explicit Boolean(){};
+    Boolean(STYPE* e1, STYPE* e2, bool is_relop=false){
+        if(is_relop && is_num(e1) &&  is_num(e2))
             return;
-        else if(is_bool(e1) &&  is_bool(e2))
+        else if(!is_relop && is_bool(e1) &&  is_bool(e2))
             return;
-        output::errorSyn(yylineno);
+        output::errorMismatch(yylineno);
     }
     explicit Boolean(STYPE* e){
         if(is_bool(e))
             return;
-        output::errorSyn(yylineno);
+        output::errorMismatch(yylineno);
     }
     Type* type() const override;
 };
@@ -93,10 +85,6 @@ public:
     explicit String(string val) : val(val){};
     Type* type() const override;
 };
-
-
-
-
 
 
 class Int : public Type{
@@ -214,8 +202,9 @@ class SymbolTable{
     vector<vector<Arg>> tables_stack;
     vector<int> offsets_stack;
     vector<Arg> funcs;
-    vector<Type*> returns;
+    Type* cur_return;
     int in_while;
+    bool in_switch;
     static SymbolTable* singleton_;
     SymbolTable(){
         auto fl1= new FormalsList();
@@ -231,20 +220,30 @@ class SymbolTable{
         funcs={Arg(v1, 0), Arg(v2, 0)};
         tables_stack.emplace_back(funcs);
         offsets_stack.emplace_back(-1);
+        cur_return = nullptr;
         in_while=0;
+        in_switch=false;
 
     };
 
 public:
+    ~SymbolTable(){
+        print_funcs();
+    }
     void print_funcs() const {
+        //if(funcs.size()<=2) return;
         bool MainMissing = true;
-        output::endScope();
         for(auto f:funcs){
-            if(f.var->id->name()=="main" && f.var->type->name()=="()->VOID")
+            if(f.var->id->name()=="main" && f.var->type->name()=="()->VOID") {
                 MainMissing= false;
-            f.print();
+            }
         }
         if(MainMissing) output::errorMainMissing();
+        output::endScope();
+        for(auto f:funcs){
+            f.print();
+        }
+
     }
     void operator=(const SymbolTable &) = delete;
     static SymbolTable *GetInstance();
@@ -256,7 +255,7 @@ public:
 
     void push_ret(STYPE* rt){
         push();
-        returns.emplace_back(dynamic_cast<Type *>(rt));
+        cur_return = dynamic_cast<Type *>(rt);
     }
 
     void push_while(STYPE* rt){
@@ -271,17 +270,19 @@ public:
         }
         tables_stack.pop_back();
         offsets_stack.pop_back();
-
-    }
-
-    void pop_ret(){
-        pop();
-        returns.pop_back();
     }
 
     void pop_while(){
         pop();
         in_while--;
+    }
+
+    void enter_switch(){
+        in_switch=true;
+    }
+
+    void exit_switch(){
+        in_switch=false;
     }
 
     void add_Func(STYPE* f){
@@ -290,11 +291,13 @@ public:
     void add_Func(Variable* f){
         if(contain_var(f->id->name()) || contain_func(f->id->name()))
             output::errorDef(yylineno, f->id->name());
+//        if(f->id->name()=="main" && f->type->name()!="()->VOID")
+//            output::errorMainMissing();
         auto args=  dynamic_cast<Func *>(f->type)->args();
         funcs.emplace_back(Arg(f, 0));
-        int offset=args.size()*-1;
+        int offset=-1;
         for(auto a:args){
-            add_var(a, offset++);
+            add_var(a, offset--);
         }
     }
 
@@ -338,29 +341,9 @@ public:
         return t != nullptr;
     }
 
-    Type* call(STYPE* id_st, STYPE* el_st=new ExpList()) const{
-        Id* id = dynamic_cast<Id *>(id_st);
-        auto* el = dynamic_cast<ExpList *>(el_st);
-        if(!contain_func(id->name()))
-            output::errorUndefFunc(yylineno,id->name());
-        auto f_args = get_func_type(id)->type_list();
-        auto& exp_list = el->exp_list;
-        if(f_args.size()!=exp_list.size())
-            output::errorPrototypeMismatch(yylineno, id->name(), f_args);
-        auto it1=f_args.begin();
-        auto it2=exp_list.begin();
-        for(;it1!=f_args.end(); ++it1,++it2){
-            if((*it1)!=(*it2)->type->name()  && !((*it1)=="INT" && (*it2)->type->name()=="BYTE"))
-                output::errorPrototypeMismatch(yylineno, id->name(), f_args);
-        }
-        return dynamic_cast<Func *>(get_func_type(id))->RetType;
-    }
-
     void assign(STYPE* id_st, STYPE* exp_st){
         Id* id = dynamic_cast<Id *>(id_st);
-        Type* exp_type = dynamic_cast<Type *>(exp_st);
-        if(!exp_type)
-            exp_type = dynamic_cast<Exp *>(exp_st)->type();
+        Type* exp_type = dynamic_cast<Exp *>(exp_st)->type();
         if(!contain_var(id->name()))
             output::errorUndef(yylineno, id->name());
         auto id_t = get_id_type(id);
@@ -371,21 +354,27 @@ public:
     }
 
     void check_return(STYPE* t){
-        Type* type = returns.back();
-        Type *ret = (dynamic_cast<Type *>(t));
-        if(dynamic_cast<Void *>(ret)){
-            if(!dynamic_cast<Void *>(type))
+        if(!t){
+            if(!dynamic_cast<Void *>(cur_return))
                 output::errorMismatch(yylineno);
         }
+        else if(dynamic_cast<Void *>(t))
+            output::errorMismatch(yylineno);
         else{
-            if(ret->name()!=type->name() && !(type->name()=="INT" && ret->name()=="BYTE"))
+            Type *ret = (dynamic_cast<Exp *>(t))->type();
+            if(ret->name()!=cur_return->name() && !(cur_return->name()=="INT" && ret->name()=="BYTE"))
                 output::errorMismatch(yylineno);
         }
+
     }
 
     void check_while(STYPE* t){
         Type *ret = (dynamic_cast<ReturnType *>(t));
-        if(!in_while) {
+        if(in_switch) {
+            if (ret->name() == "continue")
+                output::errorUnexpectedContinue(yylineno);
+        }
+        else if(!in_while) {
             if(ret->name()=="break")
                     output::errorUnexpectedBreak(yylineno);
             else if(ret->name()=="continue")
@@ -395,7 +384,28 @@ public:
 };
 
 
-
-
-
-
+class Call : public Exp{
+    Type* t;
+public:
+    Call(STYPE* id_st, STYPE* el_st=new ExpList()){
+        SymbolTable* st = SymbolTable::GetInstance();
+        Id* id = dynamic_cast<Id *>(id_st);
+        auto* el = dynamic_cast<ExpList *>(el_st);
+        if(!st->contain_func(id->name()))
+            output::errorUndefFunc(yylineno,id->name());
+        auto f_args = st->get_func_type(id)->type_list();
+        auto& exp_list = el->exp_list;
+        if(f_args.size()!=exp_list.size())
+            output::errorPrototypeMismatch(yylineno, id->name(), f_args);
+        auto it1=f_args.begin();
+        auto it2=exp_list.begin();
+        for(;it1!=f_args.end(); ++it1,++it2){
+            if((*it1)!=(*it2)->type->name()  && !((*it1)=="INT" && (*it2)->type->name()=="BYTE"))
+                output::errorPrototypeMismatch(yylineno, id->name(), f_args);
+        }
+        t= dynamic_cast<Func *>(st->get_func_type(id))->RetType;
+    }
+    Type* type() const override{
+        return t;
+    }
+};

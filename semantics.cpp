@@ -33,4 +33,23 @@ Type *String::type() const {
     return new TypeString();
 }
 
+bool is_type(STYPE* e, string type) {
+    Exp* exp=dynamic_cast<Exp*>(e);
+    if(!exp)
+        return false;
+    auto id=dynamic_cast<Id*>(e);
+    if(id)
+        exp=id;
+    auto t=exp->type()->name();
+    return t==type;
+}
+
+bool is_num(STYPE* e){
+    return is_type(e, "BYTE") || is_type(e, "INT");
+}
+
+bool is_bool(STYPE* e){
+    return is_type(e, "BOOL");
+}
+
 
